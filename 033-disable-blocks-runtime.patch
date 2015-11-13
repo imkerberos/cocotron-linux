@@ -1,0 +1,11 @@
+--- cocotron/makefiles/Makefiles/Makefile.common.org	2015-11-13 18:14:46.843333334 +0800
++++ cocotron/makefiles/Makefiles/Makefile.common	2015-11-13 18:15:02.546666660 +0800
+@@ -41,7 +41,7 @@
+ # make sure you have the BlocksRuntime
+ # (http://stackoverflow.com/questions/2297765/which-libraries-do-you-need-to-link-against-for-a-clang-program-using-blocks)
+ # If your clang does not need it, comment it out.
+-LDFLAGS += -lBlocksRuntime
++LDFLAGS += -lobjc
+ else
+ OCC = $(GCC)
+ endif

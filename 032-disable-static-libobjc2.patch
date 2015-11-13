@@ -1,0 +1,11 @@
+--- cocotron/makefiles/Foundation/Makefile.orig	2015-11-13 18:11:32.413333327 +0800
++++ cocotron/makefiles/Foundation/Makefile	2015-11-13 18:11:43.986666665 +0800
+@@ -51,7 +51,7 @@
+ ) > /dev/null}
+ 
+ 
+-STATIC_LIBS = $(GCC_LIB_DIR)/libobjc.a
++#STATIC_LIBS = $(GCC_LIB_DIR)/libobjc.a
+ 
+ LDFLAGS += -lssl -lcrypto
+ 
