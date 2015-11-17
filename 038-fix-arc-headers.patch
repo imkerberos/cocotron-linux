@@ -1,0 +1,42 @@
+--- cocotron/Foundation/NSException/NSException.h.orig	2015-11-17 16:41:25.816666663 +0800
++++ cocotron/Foundation/NSException/NSException.h	2015-11-17 16:41:58.313333332 +0800
+@@ -53,7 +53,11 @@
+ typedef struct NSExceptionFrame {
+     jmp_buf state;
+     struct NSExceptionFrame *parent;
++#if __has_feature(objc_arc)
++    __unsafe_unretained NSException *exception;
++#else
+     NSException *exception;
++#endif
+ } NSExceptionFrame;
+ 
+ FOUNDATION_EXPORT void __NSPushExceptionFrame(NSExceptionFrame *frame);
+--- cocotron/Foundation/NSMapTable.h.orig	2015-11-17 16:42:29.246666664 +0800
++++ cocotron/Foundation/NSMapTable.h	2015-11-17 16:42:58.359999989 +0800
+@@ -13,7 +13,11 @@
+ @class NSArray, NSMapTable;
+ 
+ typedef struct {
++#if __has_feature(objc_arc)
++    __unsafe_unretained NSMapTable *table;
++#else
+     NSMapTable *table;
++#endif
+     NSInteger i;
+     struct _NSMapNode *j;
+ } NSMapEnumerator;
+--- cocotron/Foundation/NSEnumerator.h.orig	2015-11-17 16:43:13.976666667 +0800
++++ cocotron/Foundation/NSEnumerator.h	2015-11-17 16:43:40.433333331 +0800
+@@ -13,7 +13,11 @@
+ typedef struct
+     {
+     unsigned long state;
++#if __has_feature(objc_arc)
++    __unsafe_unretained id *itemsPtr;
++#else
+     id *itemsPtr;
++#endif
+     unsigned long *mutationsPtr;
+     unsigned long extra[5];
+ } NSFastEnumerationState;
