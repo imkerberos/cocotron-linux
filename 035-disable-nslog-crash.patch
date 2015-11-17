@@ -1,0 +1,11 @@
+--- cocotron/Foundation/NSObjCRuntime.m.orig	2015-11-17 10:42:02.390000004 +0800
++++ cocotron/Foundation/NSObjCRuntime.m	2015-11-17 10:42:20.629999989 +0800
+@@ -78,7 +78,7 @@
+    [string release];
+    if (bytes == NULL) return;
+ 
+-   sNSLogCString(bytes,byteLength,YES);
++   sNSLogCString(bytes,byteLength,NO);
+    NSZoneFree(NULL,bytes);
+ }
+ 
