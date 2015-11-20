@@ -1,0 +1,22 @@
+--- cocotron/Foundation/NSObject/NSObject.m.orig	2015-11-20 15:47:46.132625769 +0800
++++ cocotron/Foundation/NSObject/NSObject.m	2015-11-20 15:48:35.502625769 +0800
+@@ -51,6 +51,11 @@
+ 
+ @implementation NSObject
+ 
++static id libobjc2_weak_load(id obj)
++{
++    return [obj retainCount] > 0 ? obj : nil;
++}
++
+ +(NSInteger)version {
+    return class_getVersion(self);
+ }
+@@ -61,6 +66,7 @@
+ }
+ 
+ +(void)load {
++    _objc_weak_load = libobjc2_weak_load;
+ }
+ 
+ 
