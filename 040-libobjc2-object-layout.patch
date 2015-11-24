@@ -1,0 +1,127 @@
+--- cocotron/makefiles/Makefiles/Makefile.common.orig	2015-11-24 17:33:42.995852000 +0800
++++ cocotron/makefiles/Makefiles/Makefile.common	2015-11-24 17:34:10.205852000 +0800
+@@ -24,6 +24,7 @@
+ CFLAGS += -Wno-unknown-pragmas  -Wno-unused-variable -Wno-format -Wno-deprecated-objc-isa-usage
+ CFLAGS += -DOBJC_EXPORT=
+ CFLAGS += -DLINUX -D_GNU_SOURCE -D__LITTLE_ENDIAN__ -DGCC_RUNTIME_3 -D_FORTIFY_SOURCE=1 -DPLATFORM_IS_POSIX -DPLATFORM_USES_BSD_SOCKETS
++CFLAGS += -DUSE_LIBOBJC2
+ CFLAGS += -DDATA_DIR=\"$(DATA_DIR)\"
+ 
+ LDFLAGS += -Wl,--no-undefined -fPIC
+--- cocotron/Foundation/NSZone/NSZone.m.orig	2015-11-24 17:34:35.395852000 +0800
++++ cocotron/Foundation/NSZone/NSZone.m	2015-11-24 18:03:30.465852000 +0800
+@@ -168,6 +168,80 @@
+    return refCountTable;
+ } 
+ 
++#ifdef USE_LIBOBJC2
++#if defined(__GNUC__) && __GNUC__ < 4
++#define __builtin_offsetof(s, f) (uintptr_t)(&(((s*)0)->f))
++#endif
++#define alignof(type) __builtin_offsetof(struct { const char c; type member; }, member)
++
++/*
++ *  Define a structure to hold information that is held locally
++ *  (before the start) in each object.
++ */
++typedef struct obj_layout_unpadded {
++    NSUInteger  retained;
++} unp;
++#define UNP sizeof(unp)
++
++/* GCC provides a defined value for the largest alignment required on a
++ * machine, and we must lay objects out to that alignment.
++ * For compilers that don't define it, we try to pick a likely value.
++ */
++#ifndef __BIGGEST_ALIGNMENT__
++#define __BIGGEST_ALIGNMENT__ (SIZEOF_VOIDP * 2)
++#endif
++
++/*
++ *  Now do the REAL version - using the other version to determine
++ *  what padding (if any) is required to get the alignment of the
++ *  structure correct.
++ */
++struct obj_layout {
++    char  padding[__BIGGEST_ALIGNMENT__ - ((UNP % __BIGGEST_ALIGNMENT__)
++      ? (UNP % __BIGGEST_ALIGNMENT__) : __BIGGEST_ALIGNMENT__)];
++    NSUInteger  retained;
++};
++typedef struct obj_layout *obj;
++
++void NSIncrementExtraRefCount(id object) {
++   OSSpinLockLock(&RefCountLock);
++#if 0
++   if (((obj)object)[-1].retained == 0) {
++      ((obj)object)[-1].retained = 1;
++   }
++#endif
++   if (((obj)object)[-1].retained < UINT_MAX) {
++      ((obj)object)[-1].retained ++;
++   }
++    OSSpinLockUnlock(&RefCountLock);
++}
++
++BOOL NSDecrementExtraRefCountWasZero(id object) {
++   BOOL            result=NO;
++
++   OSSpinLockLock(&RefCountLock);
++   if (((obj)object)[-1].retained == 0) {
++      OSSpinLockUnlock(&RefCountLock);
++      return YES;
++   }  else {
++    ((obj)object)[-1].retained --;
++      OSSpinLockUnlock(&RefCountLock);
++      return NO;
++   }
++}
++
++NSUInteger NSExtraRefCount(id object) {
++   NSUInteger      result=1;
++   RefCountBucket *refCount;
++
++   OSSpinLockLock(&RefCountLock);
++   if((refCount=XXHashGet(refTable(),object))!=NULL)
++    result=refCount->count;
++   OSSpinLockUnlock(&RefCountLock);
++
++   return result;
++}
++#else
+ void NSIncrementExtraRefCount(id object) {
+    RefCountBucket *refCount;
+    RefCountTable  *table=refTable();
+@@ -211,7 +285,7 @@
+ 
+    return result;
+ }
+-
++#endif /* USE_LIBOBJC2 */
+ #endif //LINUX
+ 
+ BOOL NSShouldRetainWithZone(id object,NSZone *zone) {
+@@ -233,9 +307,12 @@
+     if (zone == NULL) {
+         zone = NSDefaultMallocZone();
+     }
+-
++#ifdef USE_LIBOBJC2
++    result = NSZoneCalloc(zone, 1, class_getInstanceSize(class) + extraBytes + sizeof(struct obj_layout));
++    result = (id)&((obj)result)[1];
++#else
+     result = NSZoneCalloc(zone, 1, class_getInstanceSize(class) + extraBytes);
+-
++#endif
+     if (result) {
+ #if defined(GCC_RUNTIME_3)
+         object_setClass(result, class);
+@@ -288,6 +365,9 @@
+         object->isa = 0;
+ #endif
+ 
++#ifdef USE_LIBOBJC2
++        object = (id)&((obj)object)[-1];
++#endif
+         NSZoneFree(zone, object);
+     }
+ }
